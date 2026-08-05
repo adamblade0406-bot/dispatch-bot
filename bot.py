@@ -74,7 +74,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(file_path)
 
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-2.0-flash',
         contents=f"{SYSTEM_PROMPT}\n\nHere is the document text:\n{extracted_text}"
     )
 
