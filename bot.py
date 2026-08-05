@@ -1,9 +1,24 @@
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import pdfplumber
 from google import genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
+# Simple web server to satisfy Render's port binding requirement
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+def run_health_check_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server.serve_forever()
+
+# Environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_KEY")
 
@@ -67,6 +82,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await msg.edit_text(f"```text\n{formatted_dispatch}\n```", parse_mode="Markdown")
 
 if __name__ == "__main__":
+    # Start web server in background thread for Render port binding
+    threading.Thread(target=run_health_check_server, daemon=True).start()
+    
+    # Run Telegram bot
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
